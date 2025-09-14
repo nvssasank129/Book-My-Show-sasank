@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        SCANNER_HOME = tool 'sonar-scanner'
+        SCANNER_HOME = tool 'sonar-scanner1'
     }
 
     stages {
@@ -26,9 +26,9 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonar-server') {
+                withSonarQubeEnv('sonar-server1') {
                     sh '''
-                    $SCANNER_HOME/bin/sonar-scanner \
+                    $SCANNER_HOME/bin/sonar-scanner1 \
                     -Dsonar.projectName=BookMyShowSasank \
                     -Dsonar.projectKey=BookMyShowSasank
                     '''
@@ -39,7 +39,7 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token1'
                 }
             }
         }

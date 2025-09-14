@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        SCANNER_HOME = tool 'sonar-scanner1'
+        SCANNER_HOME = tool 'sonar-scanner'
     }
 
     stages {
@@ -28,7 +28,7 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonar-server1') {
                     sh '''
-                    $SCANNER_HOME/bin/sonar-scanner1 \
+                    $SCANNER_HOME/bin/sonar-scanner \
                     -Dsonar.projectName=BookMyShowSasank \
                     -Dsonar.projectKey=BookMyShowSasank
                     '''
