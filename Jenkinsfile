@@ -51,7 +51,7 @@ pipeline {
         stage('Docker Build & Push to DockerHub') {
             steps {
                 dir('bookmyshow-app') {
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', 
+                    withCredentials([usernamePassword(credentialsId: 'docker-creds', 
                                                     usernameVariable: 'DOCKERHUB_USERNAME', 
                                                     passwordVariable: 'DOCKERHUB_PASSWORD')]) {
                         sh """
