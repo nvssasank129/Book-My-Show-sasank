@@ -26,8 +26,8 @@ pipeline {
                 withSonarQubeEnv('sonar-server') {
                     sh ''' 
                     $SCANNER_HOME/bin/sonar-scanner \
-                        -Dsonar.projectKey=BookMyShow \
-                        -Dsonar.projectName=BookMyShow
+                        -Dsonar.projectKey=BookMyShowSasank \
+                        -Dsonar.projectName=BookMyShowSasank
                     '''
                 }
             }
@@ -63,10 +63,10 @@ pipeline {
                     withDockerRegistry(credentialsId: 'docker-creds', toolName: 'docker') {
                         sh ''' 
                         echo "Building Docker image..."
-                        docker build --no-cache -t sejalrk/bms:latest -f bookmyshow-app/Dockerfile bookmyshow-app
+                        docker build --no-cache -t sasank1219/bms:latest -f bookmyshow-app/Dockerfile bookmyshow-app
 
                         echo "Pushing Docker image to registry..."
-                        docker push sejalrk/bms:latest
+                        docker push sasank1219/bms:latest
                         '''
                     }
                 }
@@ -81,7 +81,7 @@ pipeline {
                 docker rm bms || true
 
                 echo "Running new container on port 3000..."
-                docker run -d --restart=always --name bms -p 3000:3000 sejalrk/bms:latest
+                docker run -d --restart=always --name bms -p 3000:3000 sasank1219/bms:latest
 
                 echo "Checking running containers..."
                 docker ps -a
