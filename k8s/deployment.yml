@@ -1,19 +1,13 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Service
 metadata:
-  name: bms-deployment
+  name: bms-service
+  namespace: sasank-ns
 spec:
-  replicas: 2
+  type: LoadBalancer
   selector:
-    matchLabels:
-      app: bms
-  template:
-    metadata:
-      labels:
-        app: bms
-    spec:
-      containers:
-      - name: bms
-        image: your-dockerhub-username/bms:latest
-        ports:
-        - containerPort: 3000
+    app: bms
+  ports:
+  - protocol: TCP
+    port: 3030
+    targetPort: 3030
