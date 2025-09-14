@@ -1,14 +1,13 @@
 pipeline {
     agent any
-    tools {
-        jdk 'jdk17'
-        nodejs 'node23'
-    }
+
     environment {
-        SCANNER_HOME = tool 'sonar-scanner'
+        DOCKERHUB_CREDENTIALS = 'docker-creds' // Jenkins credential ID
         DOCKER_IMAGE = "sasank1219/bms"
-        APP_PORT = 3000
+        SONARQUBE_ENV = 'SonarQube'
+        APP_PORT = "3000"
     }
+
     stages {
         stage('Clean Workspace') {
             steps {
@@ -16,100 +15,101 @@ pipeline {
             }
         }
 
-        stage('Checkout from Git') {
+        stage('Checkout Code from GitHub') {
             steps {
-                git branch: 'feature_devops_setup', url: 'https://github.com/Sejalkarwa/Book-My-Show.git'
-                sh 'ls -la'  // Verify files after checkout
+                checkout scm
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('SonarQube Analysis (Quality Gate)') {
             steps {
-                withSonarQubeEnv('sonar-server') {
-                    sh """ 
-                    $SCANNER_HOME/bin/sonar-scanner \
-                        -Dsonar.projectName=BMS \
-                        -Dsonar.projectKey=BMS
-                    """
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh '''
+                        sonar-scanner \
+                        -Dsonar.projectKey=BookMyShow \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=$SONAR_HOST_URL \
+                        -Dsonar.login=$SONAR_AUTH_TOKEN
+                    '''
                 }
             }
         }
 
-        stage('Quality Gate') {
-            steps {
-                script {
-                    waitForQualityGate abortPipeline: true, credentialsId: 'Sonar-token'
-                }
-            }
-        }
-
-        stage('Install Dependencies') {
+        stage('Install Dependencies (NPM)') {
             steps {
                 dir('bookmyshow-app') {
-                    sh """
-                    if [ -f package.json ]; then
-                        rm -rf node_modules package-lock.json
-                        npm install --prefer-offline
-                    else
-                        echo "Error: package.json not found!"
-                        exit 1
-                    fi
-                    """
+                    sh 'npm install --prefer-offline'
                 }
             }
         }
 
-        stage('Docker Build & Push') {
+        stage('Docker Build & Push to DockerHub') {
             steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'docker-creds', 
-                                                     usernameVariable: 'DOCKER_USER', 
-                                                     passwordVariable: 'DOCKER_PASS')]) {
-                        sh """
-                        echo "Logging into DockerHub..."
-                        docker login -u $DOCKER_USER -p $DOCKER_PASS
-
-                        echo "Building Docker image..."
-                        docker build --no-cache -t ${DOCKER_IMAGE}:latest -f bookmyshow-app/Dockerfile bookmyshow-app
-
-                        echo "Pushing Docker image..."
-                        docker push ${DOCKER_IMAGE}:latest
-                        """
+                dir('bookmyshow-app') {
+                    withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}",
+                                                     usernameVariable: 'DOCKERHUB_USER',
+                                                     passwordVariable: 'DOCKERHUB_PASSWORD')]) {
+                        sh '''
+                            # Secure Docker login
+                            echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USER --password-stdin
+                            
+                            # Build Docker image
+                            docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .
+                            
+                            # Push images
+                            docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                            docker tag ${DOCKER_IMAGE}:${BUILD_NUMBER} ${DOCKER_IMAGE}:latest
+                            docker push ${DOCKER_IMAGE}:latest
+                        '''
                     }
                 }
             }
         }
 
-        stage('Deploy to Container') {
+        stage('Deploy to Docker Container') {
             steps {
-                sh """
-                echo "Stopping old container if exists..."
-                docker rm -f bms || true
-
-                echo "Running new container..."
-                docker run -d --restart=always --name bms -p ${APP_PORT}:${APP_PORT} ${DOCKER_IMAGE}:latest
-
-                echo "Checking running containers..."
-                docker ps -a
-
-                echo "Fetching logs..."
-                sleep 5
-                docker logs bms
-                """
+                dir('bookmyshow-app') {
+                    sh '''
+                        # Stop existing container if running
+                        docker rm -f bms-app || true
+                        
+                        # Run new container
+                        docker run -d --name bms-app -p ${APP_PORT}:${APP_PORT} ${DOCKER_IMAGE}:latest
+                    '''
+                }
             }
         }
     }
 
     post {
-        always {
-            emailext attachLog: true,
-                subject: "Build ${currentBuild.result}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        success {
+            emailext(
+                subject: "✅ SUCCESS: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
                 body: """
-                Project: ${env.JOB_NAME}<br/>
-                Build Number: ${env.BUILD_NUMBER}<br/>
-                URL: ${env.BUILD_URL}<br/>
+                    Jenkins pipeline succeeded!
+
+                    Job: ${env.JOB_NAME}
+                    Build: #${env.BUILD_NUMBER}
+                    Docker Image: ${DOCKER_IMAGE}:${BUILD_NUMBER}
+
+                    Application deployed on port ${APP_PORT}.
                 """,
-                to: 'nvssasank1219@gmail.com'
+                to: "nvssasank1219@gmail.com"
+            )
+        }
+        failure {
+            emailext(
+                subject: "❌ FAILED: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """
+                    Jenkins pipeline failed.
+
+                    Job: ${env.JOB_NAME}
+                    Build: #${env.BUILD_NUMBER}
+
+                    Please check Jenkins console logs for details: ${BUILD_URL}
+                """,
+                to: "nvssasank1219@gmail.com"
+            )
         }
     }
 }
