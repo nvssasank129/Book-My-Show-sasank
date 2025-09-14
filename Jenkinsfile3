@@ -64,8 +64,8 @@ pipeline {
                 script {
                     withDockerRegistry(credentialsId: 'docker-creds', toolName: 'docker') {
                         sh '''
-                        docker build --no-cache -t sunil8179/bms:latest -f bookmyshow-app/Dockerfile bookmyshow-app
-                        docker push sunil8179/bms:latest
+                        docker build --no-cache -t sasank1219/bms:latest -f bookmyshow-app/Dockerfile bookmyshow-app
+                        docker push sasank1219/bms:latest
                         '''
                     }
                 }
@@ -77,7 +77,7 @@ pipeline {
                 sh '''
                 docker stop bms || true
                 docker rm bms || true
-                docker run -d --restart=always --name bms -p 3000:3000 sunil8179/bms:latest
+                docker run -d --restart=always --name bms -p 3000:3000 sasank1219/bms:latest
                 sleep 5
                 docker logs bms
                 '''
@@ -92,7 +92,7 @@ pipeline {
                 body: "Project: ${env.JOB_NAME}<br/>" +
                       "Build Number: ${env.BUILD_NUMBER}<br/>" +
                       "URL: ${env.BUILD_URL}<br/>",
-                to: 'galisunilkumar81@gmail.com'
+                to: 'nvssasank1219@gmail.com'
         }
     }
 }
