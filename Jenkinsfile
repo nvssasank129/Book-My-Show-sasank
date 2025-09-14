@@ -50,16 +50,18 @@ pipeline {
     
         stage('Docker Build & Push to DockerHub') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', DOCKERHUB_CREDENTIALS) {
-                        // Build Docker image using the project folder as context
-                        def app = docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}", "bookmyshow-app")
-                        app.push()
-                        app.push("latest")
-                    }
+                dir('bookmyshow-app') {
+                    sh """
+                        docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .
+                        docker tag ${DOCKER_IMAGE}:${BUILD_NUMBER} ${DOCKER_IMAGE}:latest
+                        echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USERNAME --password-stdin
+                        docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        docker push ${DOCKER_IMAGE}:latest
+                    """
                 }
             }
         }
+
 
         stage('Deploy to Docker Container') {
             steps {
