@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bms-service
+  labels:
+    app: bms
+spec:
+  type: LoadBalancer   # You can use NodePort if running locally
+  selector:
+    app: bms
+  ports:
+    - port: 80          # Port exposed outside the cluster
+      targetPort: 3000  # Port inside the container (from Dockerfile)
+      protocol: TCP
