@@ -16,7 +16,7 @@ pipeline {
 
         stage('Checkout from Git') {
             steps {
-                git branch: 'feature_devops_setup', url: 'https://github.com/Sejalkarwa/Book-My-Show.git'
+                git branch: 'feature/devops-pipeline', url: 'https://github.com/nvssasank129/Book-My-Show-sasank.git'
                 sh 'ls -la'
             }
         }
@@ -36,7 +36,7 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
                 }
             }
         }
@@ -60,7 +60,7 @@ pipeline {
         stage('Docker Build & Push') {
             steps {
                 script {
-                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                    withDockerRegistry(credentialsId: 'docker-creds', toolName: 'docker') {
                         sh ''' 
                         echo "Building Docker image..."
                         docker build --no-cache -t sejalrk/bms:latest -f bookmyshow-app/Dockerfile bookmyshow-app
@@ -101,7 +101,7 @@ pipeline {
                 body: "Project: ${env.JOB_NAME}<br/>" +
                       "Build Number: ${env.BUILD_NUMBER}<br/>" +
                       "URL: ${env.BUILD_URL}<br/>",
-                to: 'sejalkarwa2@gmail.com',
+                to: 'nvssasank1219@gmail.com',
                 attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
         }
     }
