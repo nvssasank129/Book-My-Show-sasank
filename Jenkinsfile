@@ -40,8 +40,9 @@ pipeline {
 
         stage('Install Dependencies (NPM)') {
             steps {
-                dir('bookmyshow-app') {       // <- use your project folder here
-                    sh 'npm ci --prefer-offline'   // uses package-lock.json if present
+                dir('bookmyshow-app') {
+                    // Use npm install instead of npm ci to avoid lockfile mismatch issues
+                    sh 'npm install --prefer-offline'
                 }
             }
         }
