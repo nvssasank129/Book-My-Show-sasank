@@ -90,7 +90,7 @@ pipeline {
 
                 Application deployed on port 3000.
                 """,
-                to: "nvssasank1219@gmail.com"
+                to: "nvssasank129@gmail.com"
             )
         }
         failure {
@@ -104,7 +104,7 @@ pipeline {
 
                 Check Jenkins console logs for details: ${BUILD_URL}
                 """,
-                to: "nvssasank1219@gmail.com"
+                to: "nvssasank129@gmail.com"
             )
         }
     }
