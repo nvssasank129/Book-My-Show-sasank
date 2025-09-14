@@ -51,16 +51,21 @@ pipeline {
         stage('Docker Build & Push to DockerHub') {
             steps {
                 dir('bookmyshow-app') {
-                    sh """
-                        docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .
-                        docker tag ${DOCKER_IMAGE}:${BUILD_NUMBER} ${DOCKER_IMAGE}:latest
-                        echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USERNAME --password-stdin
-                        docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
-                        docker push ${DOCKER_IMAGE}:latest
-                    """
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', 
+                                                    usernameVariable: 'DOCKERHUB_USERNAME', 
+                                                    passwordVariable: 'DOCKERHUB_PASSWORD')]) {
+                        sh """
+                            docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .
+                            docker tag ${DOCKER_IMAGE}:${BUILD_NUMBER} ${DOCKER_IMAGE}:latest
+                            echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USERNAME --password-stdin
+                            docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                            docker push ${DOCKER_IMAGE}:latest
+                        """
+                    }
                 }
             }
         }
+
 
 
         stage('Deploy to Docker Container') {
