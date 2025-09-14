@@ -1,45 +1,99 @@
 pipeline {
     agent any
+
+    environment {
+        // DockerHub credentials ID stored in Jenkins
+        DOCKERHUB_CREDENTIALS = 'docker-creds'
+        // DockerHub repository (replace with your username)
+        DOCKER_IMAGE = "sasank1219/bms"
+
+        // SonarQube server (configured in Jenkins > Manage Jenkins > Configure System)
+        SONARQUBE_ENV = 'SonarQube'
+    }
+
     stages {
         stage('Clean Workspace') {
             steps {
                 cleanWs()
             }
         }
-        stage('Checkout Code') {
+
+        stage('Checkout Code from GitHub') {
             steps {
                 checkout scm
             }
         }
-        stage('Install Dependencies') {
+
+        stage('SonarQube Analysis (Quality Gate)') {
             steps {
-                sh 'npm install'
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh '''
+                    sonar-scanner \
+                      -Dsonar.projectKey=BookMyShow \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=$SONAR_HOST_URL \
+                      -Dsonar.login=$SONAR_AUTH_TOKEN
+                    '''
+                }
             }
         }
-        stage('Build Docker Image') {
+
+        stage('Install Dependencies (NPM)') {
+            steps {
+                sh 'npm ci --prefer-offline'
+            }
+        }
+
+        stage('Docker Build & Push to DockerHub') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
-                        def app = docker.build("your-dockerhub-username/bms:${BUILD_NUMBER}")
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKERHUB_CREDENTIALS) {
+                        def app = docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}")
                         app.push()
+                        app.push("latest")
                     }
                 }
             }
         }
+
+        stage('Deploy to Docker Container') {
+            steps {
+                sh '''
+                docker rm -f bms-app || true
+                docker run -d --name bms-app -p 3000:3000 ${DOCKER_IMAGE}:latest
+                '''
+            }
+        }
     }
+
     post {
         success {
             emailext(
-                subject: "SUCCESS: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
-                body: "The build succeeded!",
-                to: "your-email@example.com"
+                subject: "✅ SUCCESS: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """
+                The Jenkins pipeline succeeded!
+
+                - Job: ${env.JOB_NAME}
+                - Build: #${env.BUILD_NUMBER}
+                - Docker Image: ${DOCKER_IMAGE}:${BUILD_NUMBER}
+
+                Application deployed on port 3000.
+                """,
+                to: "nvssasank1219@gmail.com"
             )
         }
         failure {
             emailext(
-                subject: "FAILED: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
-                body: "The build failed!",
-                to: "your-email@example.com"
+                subject: "❌ FAILED: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """
+                The Jenkins pipeline failed.
+
+                - Job: ${env.JOB_NAME}
+                - Build: #${env.BUILD_NUMBER}
+
+                Please check Jenkins console logs for details: ${BUILD_URL}
+                """,
+                to: "nvssasank1219@gmail.com"
             )
         }
     }
