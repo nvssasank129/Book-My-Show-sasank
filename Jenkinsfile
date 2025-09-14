@@ -2,10 +2,12 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'docker-creds' // Jenkins credential ID
+        // DockerHub credentials ID stored in Jenkins
+        DOCKERHUB_CREDENTIALS = 'docker-creds'
         DOCKER_IMAGE = "sasank1219/bms"
+
+        // SonarQube server configured in Jenkins
         SONARQUBE_ENV = 'SonarQube'
-        APP_PORT = "3000"
     }
 
     stages {
@@ -15,27 +17,27 @@ pipeline {
             }
         }
 
-        stage('Checkout Code from GitHub') {
+        stage('Checkout Code') {
             steps {
                 checkout scm
             }
         }
 
-        stage('SonarQube Analysis (Quality Gate)') {
+        stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv("${SONARQUBE_ENV}") {
                     sh '''
                         sonar-scanner \
-                        -Dsonar.projectKey=BookMyShow \
-                        -Dsonar.sources=. \
-                        -Dsonar.host.url=$SONAR_HOST_URL \
-                        -Dsonar.login=$SONAR_AUTH_TOKEN
+                          -Dsonar.projectKey=BookMyShow \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=$SONAR_HOST_URL \
+                          -Dsonar.login=$SONAR_AUTH_TOKEN
                     '''
                 }
             }
         }
 
-        stage('Install Dependencies (NPM)') {
+        stage('Install Dependencies') {
             steps {
                 dir('bookmyshow-app') {
                     sh 'npm install --prefer-offline'
@@ -43,20 +45,17 @@ pipeline {
             }
         }
 
-        stage('Docker Build & Push to DockerHub') {
+        stage('Docker Build & Push') {
             steps {
                 dir('bookmyshow-app') {
-                    withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}",
-                                                     usernameVariable: 'DOCKERHUB_USER',
-                                                     passwordVariable: 'DOCKERHUB_PASSWORD')]) {
+                    withCredentials([usernamePassword(
+                        credentialsId: "${DOCKERHUB_CREDENTIALS}",
+                        usernameVariable: 'DOCKERHUB_USERNAME',
+                        passwordVariable: 'DOCKERHUB_PASSWORD'
+                    )]) {
                         sh '''
-                            # Secure Docker login
-                            echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USER --password-stdin
-                            
-                            # Build Docker image
+                            echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USERNAME --password-stdin
                             docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .
-                            
-                            # Push images
                             docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
                             docker tag ${DOCKER_IMAGE}:${BUILD_NUMBER} ${DOCKER_IMAGE}:latest
                             docker push ${DOCKER_IMAGE}:latest
@@ -70,11 +69,8 @@ pipeline {
             steps {
                 dir('bookmyshow-app') {
                     sh '''
-                        # Stop existing container if running
                         docker rm -f bms-app || true
-                        
-                        # Run new container
-                        docker run -d --name bms-app -p ${APP_PORT}:${APP_PORT} ${DOCKER_IMAGE}:latest
+                        docker run -d --name bms-app -p 3000:3000 ${DOCKER_IMAGE}:latest
                     '''
                 }
             }
@@ -86,13 +82,13 @@ pipeline {
             emailext(
                 subject: "✅ SUCCESS: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
                 body: """
-                    Jenkins pipeline succeeded!
+                The Jenkins pipeline succeeded!
 
-                    Job: ${env.JOB_NAME}
-                    Build: #${env.BUILD_NUMBER}
-                    Docker Image: ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                - Job: ${env.JOB_NAME}
+                - Build: #${env.BUILD_NUMBER}
+                - Docker Image: ${DOCKER_IMAGE}:${BUILD_NUMBER}
 
-                    Application deployed on port ${APP_PORT}.
+                Application deployed on port 3000.
                 """,
                 to: "nvssasank1219@gmail.com"
             )
@@ -101,12 +97,12 @@ pipeline {
             emailext(
                 subject: "❌ FAILED: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
                 body: """
-                    Jenkins pipeline failed.
+                The Jenkins pipeline failed.
 
-                    Job: ${env.JOB_NAME}
-                    Build: #${env.BUILD_NUMBER}
+                - Job: ${env.JOB_NAME}
+                - Build: #${env.BUILD_NUMBER}
 
-                    Please check Jenkins console logs for details: ${BUILD_URL}
+                Check Jenkins console logs for details: ${BUILD_URL}
                 """,
                 to: "nvssasank1219@gmail.com"
             )
