@@ -40,7 +40,9 @@ pipeline {
 
         stage('Install Dependencies (NPM)') {
             steps {
-                sh 'npm install --prefer-offline'
+                dir('bookmyshow-app') {       // <- use your project folder here
+                    sh 'npm ci --prefer-offline'   // uses package-lock.json if present
+                }
             }
         }
 
