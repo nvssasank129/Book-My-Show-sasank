@@ -9,5 +9,5 @@ spec:
     app: bms
   ports:
   - protocol: TCP
-    port: 3030
-    targetPort: 3030
+    port: 3090
+    targetPort: 3090

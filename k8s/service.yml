@@ -9,5 +9,5 @@ spec:
     app: bms
   ports:
   - protocol: TCP
-    port: 3030        # External port exposed to users
-    targetPort: 3030  # Internal port your app listens on
+    port: 3090        # External port exposed to users
+    targetPort: 3090  # Internal port your app listens on
