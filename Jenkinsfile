@@ -47,11 +47,13 @@ pipeline {
             }
         }
 
+    
         stage('Docker Build & Push to DockerHub') {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', DOCKERHUB_CREDENTIALS) {
-                        def app = docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}")
+                        // Build Docker image using the project folder as context
+                        def app = docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}", "bookmyshow-app")
                         app.push()
                         app.push("latest")
                     }
