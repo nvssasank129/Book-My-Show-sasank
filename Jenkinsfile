@@ -40,7 +40,7 @@ pipeline {
 
         stage('Install Dependencies (NPM)') {
             steps {
-                sh 'npm ci --prefer-offline'
+                sh 'npm install --prefer-offline'
             }
         }
 
